@@ -6,6 +6,8 @@ use League\Container\Container;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\UriInterface;
+use Zend\Diactoros\Uri;
 
 class RouteCollection
 {
@@ -14,88 +16,51 @@ class RouteCollection
      * @var Route []
      */
     private $routes = [];
+    /**
+     * @var Container|ContainerInterface
+     */
     private $container;
+    /**
+     * @var UriInterface
+     */
     private $request_url;
-    private $prefixes = [];
+    /**
+     * @var array
+     */
     private $namedRoutes = [];
-    private $methodsRoutes = [
-        Route::ANY => []
-    ];
+    /**
+     * @var RouteGroup[]
+     */
     private $groups = [];
+    /**
+     * @var RouteGroup[]
+     */
+    private $groupsStack = [];
 
     public function __construct(ContainerInterface $container = null)
     {
         $this->container = $container ?? new Container();
+        $this->groupsStack[] = $this->groups[] = new RouteGroup();
     }
 
     public function group($prefix_path, \Closure $callback)
     {
-        $this->setPrefixes($this->parsePath($prefix_path));
-        $group = new RouteGroup($this->getPrefixes(), $this);
-
+        $parentgroup = end($this->groupsStack);
+        $group = $parentgroup->addGroup($prefix_path);
+        $this->groups[] = $group;
+        $this->groupsStack[] = $group;
         if (is_callable($callback)) {
             $callback($this);
-            $this->resetPrefixes();
+            array_pop($this->groupsStack);
         }
         return $group;
     }
 
-    public function getRoutesGroup($prefix)
-    {
-        return $this->groups[$prefix]['routes'];
-    }
-
-    private function setPrefixes($path)
-    {
-        $this->prefixes[] = $path;
-    }
-
-    private function resetPrefixes()
-    {
-        array_pop($this->prefixes);
-    }
-
-    private function getPrefixes()
-    {
-        return implode('', $this->prefixes);
-    }
-
-    private function parsePath($path)
-    {
-        $path = sprintf('/%s', ltrim($path, '/'));
-        $path = sprintf('%s', rtrim($path, '/'));
-        return $path;
-    }
-
-    private function prepareHandler($handler)
-    {
-        if (is_array($handler) and is_string($handler[0])) {
-            if (!$this->container->has($handler[0])) {
-                $this->container->share($handler[0])->withArguments([$this->container]);
-            }
-            $handler[0] = $this->container->get($handler[0]);
-        }
-
-        return $handler;
-    }
-
     public function map($method, $path, $handler)
     {
-
-        $handler = $this->prepareHandler($handler);
-
-        $route = new Route((array)$method, $this->getPrefixes() . $this->parsePath($path), $handler);
+        $group = end($this->groupsStack);
+        $route = $group->addRoute((array)$method, $path, $handler, $this->container);
         $this->routes[] = $route;
-        foreach ($route->methods() as $method) {
-            $this->methodsRoutes[$method][] = $route;
-        }
-        if (!empty($this->prefixes)) {
-            $prefixes = '';
-            foreach ($this->prefixes as $prefix) {
-                $prefixes .= $prefix;
-                $this->groups[$prefixes]['routes'][] = $route;
-            }
-        }
         return $route;
     }
 
@@ -146,8 +111,10 @@ class RouteCollection
     public function viewRoutes()
     {
         $routes = [];
-        foreach ($this->routes as $route) {
-            $routes[] = $route->path();
+        foreach ($this->groups as $group) {
+            foreach ($group->getRoutes() as $route) {
+                $routes[] = $route->pathLog();
+            }
         }
         return $routes;
     }
@@ -171,28 +138,18 @@ class RouteCollection
 
     public function dispatch(RequestInterface $request, ResponseInterface $response, $path = false)
     {
-
         $httpMethod = $request->getMethod();
-        $uri = $request->getUri();
+        $this->request_url = $path ? new Uri($path) : $request->getUri();
 
-        $this->prepareRoutes();
-
-        $this->methodsRoutes[strtoupper($httpMethod)] = array_merge($this->methodsRoutes[strtoupper($httpMethod)],
-            $this->methodsRoutes[Route::ANY]);
-
-        $this->request_url = ($path) ? $path : (string)$uri;
-        $path_info = parse_url($path);
-        $path = $path_info['path'];
-
-        foreach ($this->methodsRoutes[strtoupper($httpMethod)] as $route) {
-            if (preg_match_all($route->regex(), $path, $arguments, PREG_SET_ORDER, 0)) {
-                if ($route->acceptPath($path_info)) {
+        foreach ($this->routes as $route) {
+            if (preg_match_all($route->regex(), $this->request_url->getPath(), $arguments, PREG_SET_ORDER, 0)) {
+                if ($route->acceptPath($httpMethod, $this->request_url)) {
                     return $route->execute($request, $response, $arguments[0]);
                 }
             }
         }
 
-        throw new \InvalidArgumentException("The route $uri with method $httpMethod doesnt exist");
+        throw new \InvalidArgumentException("The route $path with method $httpMethod doesnt exist");
     }
 
     public function getUrl($name, $params = [], $request_url = null)

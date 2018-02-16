@@ -2,8 +2,10 @@
 
 namespace RouteF;
 
+use Psr\Container\ContainerInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\UriInterface;
 
 class Route
 {
@@ -18,9 +20,8 @@ class Route
     const LINK = 'LINK';
     const ERROR = 'ERROR';
 
-    private $methods;
+    private $methods = [];
     private $path;
-    private $callable;
     private $args = [];
     private $name;
     private $patterns = [
@@ -34,13 +35,29 @@ class Route
     private $stack = [];
     private $host;
     private $scheme;
+    /**
+     * @var ContainerInterface
+     */
+    private $container;
 
-    public function __construct(array $methods, $path, $callable)
+    public function __construct(array $methods, $path, $callable, $container)
     {
         $this->methods = $methods;
         $this->path = $path;
-        $this->callable = $callable;
-        $this->stack[] = $callable;
+        $this->container = $container;
+        $this->stack[] = $this->prepareHandler($callable);
+    }
+
+    private function prepareHandler($handler)
+    {
+        if (is_array($handler) and is_string($handler[0])) {
+            if (!$this->container->has($handler[0])) {
+                $this->container->share($handler[0])->withArguments([$this->container]);
+            }
+            $handler[0] = $this->container->get($handler[0]);
+        }
+
+        return $handler;
     }
 
     public function middleware(callable $callable)
@@ -87,6 +104,13 @@ class Route
         return $this->path;
     }
 
+    public function pathLog()
+    {
+        $scheme = $this->scheme ?? htmlentities('<scheme>');
+        $host = $this->host ?? htmlentities('<host>');
+        return $scheme . '://' . $host . $this->path;
+    }
+
     public function url(array $url_info, array $params = [])
     {
         $host = $this->host ?? $url_info['host'];
@@ -117,11 +141,6 @@ class Route
         return $path;
     }
 
-    public function callable()
-    {
-        return $this->callable;
-    }
-
     public function args($arguments)
     {
         $params = [];
@@ -133,12 +152,15 @@ class Route
         return $params;
     }
 
-    public function acceptPath(array $pathinfo)
+    public function acceptPath($method, UriInterface $pathinfo)
     {
-        if ($this->scheme && $this->scheme != $pathinfo['scheme']) {
+        if (!in_array($method, $this->methods)) {
             return false;
         }
-        if ($this->host && $this->host != $pathinfo['host']) {
+        if ($this->scheme && $this->scheme != $pathinfo->getScheme()) {
+            return false;
+        }
+        if ($this->host && $this->host != $pathinfo->getHost()) {
             return false;
         }
         return true;
