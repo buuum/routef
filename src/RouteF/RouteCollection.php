@@ -37,6 +37,14 @@ class RouteCollection
      */
     private $groupsStack = [];
 
+    private $patterns = [
+        'number'        => '[0-9]+',
+        'word'          => '\w+',
+        'alphanum_dash' => '[a-zA-Z0-9-_]+',
+        'slug'          => '[a-z0-9-]+',
+        'uuid'          => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}+'
+    ];
+
     public function __construct(ContainerInterface $container = null)
     {
         $this->container = $container ?? new Container();
@@ -143,7 +151,7 @@ class RouteCollection
         $this->request_url = $path ? new Uri($path) : $request->getUri();
 
         foreach ($this->routes as $route) {
-            if (preg_match_all($route->regex(), $this->request_url->getPath(), $arguments, PREG_SET_ORDER, 0)) {
+            if (preg_match_all($route->regex($this->patterns), $this->request_url->getPath(), $arguments, PREG_SET_ORDER, 0)) {
                 if ($route->acceptPath($httpMethod, $this->request_url)) {
                     return $route->execute($request, $response, $arguments[0]);
                 }

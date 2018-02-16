@@ -25,13 +25,6 @@ class Route
     private $path;
     private $args = [];
     private $name;
-    private $patterns = [
-        'number'        => '[0-9]+',
-        'word'          => '\w+',
-        'alphanum_dash' => '[a-zA-Z0-9-_]+',
-        'slug'          => '[a-z0-9-]+',
-        'uuid'          => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}+'
-    ];
 
     private $stack = [];
     private $host;
@@ -40,6 +33,7 @@ class Route
      * @var ContainerInterface
      */
     private $container;
+    private $patterns = [];
 
     public function __construct(array $methods, $path, $callable)
     {
@@ -182,8 +176,9 @@ class Route
         return true;
     }
 
-    public function regex()
+    public function regex($patterns)
     {
+        $this->patterns = $patterns;
         return '@^' . $this->regexPath() . '[/]*$@';
     }
 
