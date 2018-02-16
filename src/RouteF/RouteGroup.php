@@ -35,9 +35,9 @@ class RouteGroup
         return $path;
     }
 
-    public function addRoute(array $method, $path, $handler, $container)
+    public function addRoute(array $method, $path, $handler)
     {
-        $route = new Route((array)$method, $this->prefix . $this->parsePath($path), $handler, $container);
+        $route = new Route((array)$method, $this->prefix . $this->parsePath($path), $handler);
         $this->routes[] = $route;
         return $route;
     }

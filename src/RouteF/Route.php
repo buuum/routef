@@ -2,6 +2,7 @@
 
 namespace RouteF;
 
+use League\Container\Container;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -40,30 +41,45 @@ class Route
      */
     private $container;
 
-    public function __construct(array $methods, $path, $callable, $container)
+    public function __construct(array $methods, $path, $callable)
     {
         $this->methods = $methods;
         $this->path = $path;
-        $this->container = $container;
-        $this->stack[] = $this->prepareHandler($callable);
+        $this->stack[] = function ($request, $response, $args) use ($callable) {
+            $callable = $this->prepareCallable($callable);
+            $result = call_user_func($callable, $request, $response, $args);
+            return $result;
+        };
     }
 
-    private function prepareHandler($handler)
+    public function setContainer(Container $container)
     {
-        if (is_array($handler) and is_string($handler[0])) {
-            if (!$this->container->has($handler[0])) {
-                $this->container->share($handler[0])->withArguments([$this->container]);
-            }
-            $handler[0] = $this->container->get($handler[0]);
-        }
-
-        return $handler;
+        $this->container = $container;
     }
 
-    public function middleware(callable $callable)
+    private function prepareCallable($callable)
+    {
+        if (is_string($callable)) {
+            if ($this->container->has($callable)) {
+                $callable = $this->container->get($callable);
+            } else {
+                throw new \InvalidArgumentException("Callable {$callable} is invalid.");
+            }
+        } elseif (is_array($callable) and is_string($callable[0])) {
+
+            if (!$this->container->has($callable[0])) {
+                $this->container->share($callable[0])->withArguments([$this->container]);
+            }
+            $callable[0] = $this->container->get($callable[0]);
+        }
+        return $callable;
+    }
+
+    public function middleware($callable)
     {
         $next = end($this->stack);
         $this->stack[] = function ($request, $response, $args) use ($callable, $next) {
+            $callable = $this->prepareCallable($callable);
             $result = call_user_func($callable, $request, $response, $args, $next);
             return $result;
         };

@@ -59,7 +59,8 @@ class RouteCollection
     public function map($method, $path, $handler)
     {
         $group = end($this->groupsStack);
-        $route = $group->addRoute((array)$method, $path, $handler, $this->container);
+        $route = $group->addRoute((array)$method, $path, $handler);
+        $route->setContainer($this->container);
         $this->routes[] = $route;
         return $route;
     }
