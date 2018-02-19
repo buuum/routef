@@ -10,6 +10,7 @@ class Route
     private $host;
     private $scheme;
     private $handlers = [];
+    private $strategy;
 
     public function __construct(array $methods, $path, $callable)
     {
@@ -26,6 +27,7 @@ class Route
     public function middleware($handler)
     {
         $this->handlers[] = $handler;
+        return $this;
     }
 
     public function methods()
@@ -49,6 +51,17 @@ class Route
     {
         $this->scheme = ($this->scheme) ?? $scheme;
         return $this;
+    }
+
+    public function setStrategy($strategy)
+    {
+        $this->strategy = ($this->strategy) ?? $strategy;;
+        return $this;
+    }
+
+    public function strategy()
+    {
+        return $this->strategy;
     }
 
     public function path()

@@ -18,14 +18,52 @@ class RouteGroup
      */
     private $subgroups = [];
 
+    private $scheme;
+    private $host;
+    private $strategy;
+
     public function __construct($prefix = '')
     {
         $this->prefix = $prefix;
     }
 
+    public function prefix()
+    {
+        return $this->prefix;
+    }
+
     public function getRoutes()
     {
         return $this->routes;
+    }
+
+    public function setStrategy($strategy)
+    {
+        $this->strategy = $strategy;
+        foreach ($this->routes as $route) {
+            $route->setStrategy($strategy);
+        }
+        foreach ($this->subgroups as $group) {
+            $group->setStrategy($strategy);
+        }
+        return $this;
+    }
+
+    public function strategy()
+    {
+        return $this->strategy;
+    }
+
+    public function pathLog()
+    {
+        $scheme = $this->scheme ?? '<scheme>';
+        $host = $this->host ?? '<host>';
+        return $scheme . '://' . $host . $this->prefix;
+    }
+
+    public function subGroups()
+    {
+        return $this->subgroups;
     }
 
     private function parsePath($path)
@@ -63,6 +101,7 @@ class RouteGroup
 
     public function setScheme($scheme)
     {
+        $this->scheme = $scheme;
         foreach ($this->routes as $route) {
             $route->setScheme($scheme);
         }
@@ -75,7 +114,7 @@ class RouteGroup
 
     public function setHost($host)
     {
-
+        $this->host = $host;
         foreach ($this->routes as $route) {
             $route->setHost($host);
         }

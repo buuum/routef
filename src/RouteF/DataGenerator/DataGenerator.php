@@ -3,6 +3,7 @@
 namespace RouteF\DataGenerator;
 
 use RouteF\Route;
+use RouteF\RouteGroup;
 
 class DataGenerator
 {
@@ -16,9 +17,10 @@ class DataGenerator
 
     /**
      * @param $routes Route[]
+     * @param RouteGroup $parentgroup
      * @return array
      */
-    public function generate($routes)
+    public function generate($routes, RouteGroup $parentgroup = null)
     {
 
         $maxGroup = 15;
@@ -38,6 +40,7 @@ class DataGenerator
                 'regex'     => $regex,
                 'methods'   => $route->methods(),
                 'handlers'  => $route->getHandlers(),
+                'strategy'  => $route->strategy(),
                 'arguments' => array_column($args, 'name')
             ];
 
@@ -63,7 +66,26 @@ class DataGenerator
             ];
         }
 
+        $array_routes['groups'] = [];
+        if ($parentgroup) {
+            $this->regexGroup($parentgroup, $array_routes['groups']);
+        }
+
         return $array_routes;
+    }
+
+    protected function regexGroup(RouteGroup $group, &$groups)
+    {
+        foreach ($group->subGroups() as $subGroup) {
+            $groups[] = $this->regexGroup($subGroup, $groups);
+        }
+        list($regex, $args) = $this->parseRoute($group->pathLog());
+        return [
+            'prefix'   => $group->prefix(),
+            'regex'    => '~^' . substr_replace($regex, '[/]?.*', -4) . '$~',
+            'args'     => $args,
+            'strategy' => $group->strategy()
+        ];
     }
 
     protected function parseRoute($path)

@@ -59,7 +59,7 @@ class RouteCollection
         if ($this->cacheDisabled) {
             $callback($this);
             $generator = new DataGenerator($this->patterns);
-            $this->data = $generator->generate($this->routes);
+            $this->data = $generator->generate($this->routes, end($this->groupsStack));
         } else {
             if (!file_exists($this->cache_file)) {
                 $callback($this);
@@ -70,7 +70,6 @@ class RouteCollection
                 $this->data = json_decode(file_get_contents($this->cache_file), true);
             }
         }
-
     }
 
     public function group($prefix_path, \Closure $callback)

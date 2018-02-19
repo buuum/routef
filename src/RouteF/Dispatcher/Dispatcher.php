@@ -3,6 +3,10 @@
 namespace RouteF\Dispatcher;
 
 use League\Container\Container;
+use RouteF\Exceptions\MethodNotAllowedException;
+use RouteF\Exceptions\NotFoundException;
+use RouteF\Strategy\DefaultStrategy;
+use RouteF\Strategy\StrategyInterface;
 
 class Dispatcher
 {
@@ -11,6 +15,7 @@ class Dispatcher
     private $stack;
 
     private $container;
+    private $strategy;
 
     public function __construct(Container $container, $data)
     {
@@ -30,6 +35,8 @@ class Dispatcher
         foreach ($route['handlers'] as $handler) {
             $this->middleware($handler);
         }
+
+        $this->middleware([$this->getStrategy(), 'executeStrategy']);
     }
 
     private function middleware($callable)
@@ -77,22 +84,66 @@ class Dispatcher
             }
 
             $route = $regexgroup['routeMap'][count($matches)];
-            if (!in_array(strtoupper($method), $route['methods'])) {
-                throw new \InvalidArgumentException('Method not allowed for this route.');
+
+            if (!empty($route['strategy'])) {
+                $this->setStrategy($route['strategy']);
             }
 
-            $this->prepareRoute($route);
+            if (!in_array(strtoupper($method), $route['methods'])) {
+                return $this->handleMethodNotAllowed($method);
+            }
 
             $vars = [];
             $i = 0;
-            foreach ($regexgroup['routeMap'][count($matches)]['arguments'] as $varName) {
+            foreach ($route['arguments'] as $varName) {
                 $vars[$varName] = $matches[++$i];
             }
-            return $this->execute($vars);
+
+            return $this->handleFound($route, $vars);
         }
 
-        throw new \InvalidArgumentException('Route Not Found');
+        if (!empty($this->data['groups'])) {
+            foreach ($this->data['groups'] as $group) {
+                if (!preg_match($group['regex'], $path, $matches)) {
+                    continue;
+                }
+                if (!empty($group['strategy'])) {
+                    $this->setStrategy($group['strategy']);
+                }
+            }
+        }
 
+        return $this->handleNotFound();
+
+    }
+
+    protected function setStrategy($strategy)
+    {
+        $this->strategy = $this->prepareCallable($strategy);
+    }
+
+    protected function getStrategy(): StrategyInterface
+    {
+        if (!$this->strategy) {
+            $this->strategy = new DefaultStrategy();
+        }
+        return $this->strategy;
+    }
+
+    protected function handleFound($route, $vars)
+    {
+        $this->prepareRoute($route);
+        return $this->execute($vars);
+    }
+
+    protected function handleMethodNotAllowed($method)
+    {
+        return $this->getStrategy()->methodNotAllowedDecorator(new MethodNotAllowedException('METHOD ' . $method . ' NOT ALLOWED'));
+    }
+
+    protected function handleNotFound()
+    {
+        return $this->getStrategy()->notFoundDecorator(new NotFoundException('NOT FOUND'));
     }
 
     public function getUrl($name, $params, $request_url)
