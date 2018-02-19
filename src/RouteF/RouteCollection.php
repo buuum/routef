@@ -4,10 +4,6 @@ namespace RouteF;
 
 use League\Container\Container;
 use Psr\Container\ContainerInterface;
-use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Message\UriInterface;
-use Zend\Diactoros\Uri;
 
 class RouteCollection
 {
@@ -21,13 +17,9 @@ class RouteCollection
      */
     private $container;
     /**
-     * @var UriInterface
-     */
-    private $request_url;
-    /**
      * @var array
      */
-    private $namedRoutes = [];
+    private $request_url;
     /**
      * @var RouteGroup[]
      */
@@ -44,11 +36,39 @@ class RouteCollection
         'slug'          => '[a-z0-9-]+',
         'uuid'          => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}+'
     ];
+    private $cache_file = '';
+    private $cacheDisabled = true;
+    private $data;
+    private $dispatcher;
 
-    public function __construct(ContainerInterface $container = null)
+    public function __construct(ContainerInterface $container = null, array $options = null)
     {
+        if ($options) {
+            $this->cache_file = $options['cacheFile'] ?? '';
+            $this->cacheDisabled = $options['cacheDisabled'] ?? true;
+        }
+
         $this->container = $container ?? new Container();
         $this->groupsStack[] = $this->groups[] = new RouteGroup();
+    }
+
+    public function initRoutes(\Closure $callback)
+    {
+        if ($this->cacheDisabled) {
+            $callback($this);
+            $generator = new DataGenerator($this->patterns);
+            $this->data = $generator->generate($this->routes);
+        } else {
+            if (!file_exists($this->cache_file)) {
+                $callback($this);
+                $generator = new DataGenerator($this->patterns);
+                $this->data = $generator->generate($this->routes);
+                file_put_contents($this->cache_file, json_encode($this->data));
+            } else {
+                $this->data = json_decode(file_get_contents($this->cache_file), true);
+            }
+        }
+
     }
 
     public function group($prefix_path, \Closure $callback)
@@ -68,53 +88,51 @@ class RouteCollection
     {
         $group = end($this->groupsStack);
         $route = $group->addRoute((array)$method, $path, $handler);
-        $route->setContainer($this->container);
         $this->routes[] = $route;
         return $route;
     }
 
     public function any($path, $handler)
     {
-        return $this->map(Route::ANY, $path, $handler);
+        return $this->map('ANY', $path, $handler);
     }
 
     public function get($path, $handler)
     {
-        return $this->map(Route::GET, $path, $handler);
+        return $this->map('GET', $path, $handler);
     }
 
     public function head($path, $handler)
     {
-        return $this->map(Route::HEAD, $path, $handler);
+        return $this->map('HEAD', $path, $handler);
     }
-
 
     public function post($path, $handler)
     {
-        return $this->map(Route::POST, $path, $handler);
+        return $this->map('POST', $path, $handler);
     }
 
     public function put($path, $handler)
     {
-        return $this->map(Route::PUT, $path, $handler);
+        return $this->map('PUT', $path, $handler);
     }
 
 
     public function patch($path, $handler)
     {
-        return $this->map(Route::PATCH, $path, $handler);
+        return $this->map('PATCH', $path, $handler);
     }
 
 
     public function delete($path, $handler)
     {
-        return $this->map(Route::DELETE, $path, $handler);
+        return $this->map('DELETE', $path, $handler);
     }
 
 
     public function options($path, $handler)
     {
-        return $this->map(Route::OPTIONS, $path, $handler);
+        return $this->map('OPTIONS', $path, $handler);
     }
 
     public function viewRoutes()
@@ -128,50 +146,24 @@ class RouteCollection
         return $routes;
     }
 
-    private function prepareRoutes()
+    public function getDispatcher(): Dispatcher
     {
-        if (empty($this->namedRoutes)) {
-
-            foreach ($this->routes as $route) {
-
-                if ($route->name()) {
-                    if (!empty($this->namedRoutes[$route->name()])) {
-                        throw new \InvalidArgumentException("The route with name {$route->name()} is previous declared");
-                    }
-                    $this->namedRoutes[$route->name()] = $route;
-                }
-            }
+        if (!$this->dispatcher) {
+            $this->dispatcher = new Dispatcher($this->container, $this->data);
         }
-
+        return $this->dispatcher;
     }
 
-    public function dispatch(RequestInterface $request, ResponseInterface $response, $path = false)
+    public function dispatch($method, $path)
     {
-        $httpMethod = $request->getMethod();
-        $this->request_url = $path ? new Uri($path) : $request->getUri();
-
-        foreach ($this->routes as $route) {
-            if (preg_match_all($route->regex($this->patterns), $this->request_url->getPath(), $arguments, PREG_SET_ORDER, 0)) {
-                if ($route->acceptPath($httpMethod, $this->request_url)) {
-                    return $route->execute($request, $response, $arguments[0]);
-                }
-            }
-        }
-
-        throw new \InvalidArgumentException("The route $path with method $httpMethod doesnt exist");
+        $this->request_url = parse_url($path);
+        return $this->getDispatcher()->dispatch($method, $path);
     }
 
     public function getUrl($name, $params = [], $request_url = null)
     {
-
-        $this->prepareRoutes();
-
-        if (empty($this->namedRoutes[$name])) {
-            throw new \InvalidArgumentException("Route with name $name doesnt exist");
-        }
-
-        return $this->namedRoutes[$name]->url(parse_url($request_url ? $request_url : (string)$this->request_url),
-            $params);
+        return $this->getDispatcher()->getUrl($name, $params,
+            $request_url ? parse_url($request_url) : $this->request_url);
 
     }
 }
