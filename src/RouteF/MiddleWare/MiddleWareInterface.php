@@ -1,6 +1,6 @@
 <?php
 
-namespace RouteF;
+namespace RouteF\MiddleWare;
 
 interface MiddleWareInterface
 {

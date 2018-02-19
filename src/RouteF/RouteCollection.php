@@ -4,6 +4,8 @@ namespace RouteF;
 
 use League\Container\Container;
 use Psr\Container\ContainerInterface;
+use RouteF\DataGenerator\DataGenerator;
+use RouteF\Dispatcher\Dispatcher;
 
 class RouteCollection
 {

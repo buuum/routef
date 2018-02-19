@@ -1,6 +1,6 @@
 <?php
 
-namespace RouteF;
+namespace RouteF\Dispatcher;
 
 use League\Container\Container;
 

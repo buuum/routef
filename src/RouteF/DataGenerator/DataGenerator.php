@@ -1,6 +1,8 @@
 <?php
 
-namespace RouteF;
+namespace RouteF\DataGenerator;
+
+use RouteF\Route;
 
 class DataGenerator
 {
