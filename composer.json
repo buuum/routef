@@ -23,10 +23,7 @@
   "require": {
     "php": ">=7.0.0",
     "psr/container": "^1.0",
-    "league/container": "^2.4",
-    "symfony/http-foundation": "^3.4",
-    "symfony/psr-http-message-bridge": "^1.0",
-    "zendframework/zend-diactoros": "^1.7"
+    "league/container": "^2.4"
   },
   "require-dev": {
     "phpunit/phpunit": "*"

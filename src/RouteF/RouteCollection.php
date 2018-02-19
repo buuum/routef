@@ -3,7 +3,6 @@
 namespace RouteF;
 
 use League\Container\Container;
-use Psr\Container\ContainerInterface;
 use RouteF\DataGenerator\DataGenerator;
 use RouteF\Dispatcher\Dispatcher;
 
@@ -15,7 +14,7 @@ class RouteCollection
      */
     private $routes = [];
     /**
-     * @var Container|ContainerInterface
+     * @var Container
      */
     private $container;
     /**
@@ -43,7 +42,7 @@ class RouteCollection
     private $data;
     private $dispatcher;
 
-    public function __construct(ContainerInterface $container = null, array $options = null)
+    public function __construct(Container $container = null, array $options = null)
     {
         if ($options) {
             $this->cache_file = $options['cacheFile'] ?? '';
