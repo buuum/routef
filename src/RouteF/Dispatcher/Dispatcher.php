@@ -125,7 +125,7 @@ class Dispatcher
     protected function getStrategy(): StrategyInterface
     {
         if (!$this->strategy) {
-            $this->strategy = new DefaultStrategy();
+            $this->strategy = (!empty($this->data['strategy'])) ? $this->prepareCallable($this->data['strategy']) : new DefaultStrategy();
         }
         return $this->strategy;
     }

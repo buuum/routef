@@ -24,10 +24,6 @@ class RouteCollection
     /**
      * @var RouteGroup[]
      */
-    private $groups = [];
-    /**
-     * @var RouteGroup[]
-     */
     private $groupsStack = [];
 
     private $patterns = [
@@ -41,6 +37,7 @@ class RouteCollection
     private $cacheDisabled = true;
     private $data;
     private $dispatcher;
+    private $strategy;
 
     public function __construct(Container $container = null, array $options = null)
     {
@@ -50,7 +47,7 @@ class RouteCollection
         }
 
         $this->container = $container ?? new Container();
-        $this->groupsStack[] = $this->groups[] = new RouteGroup();
+        $this->groupsStack[] = new RouteGroup();
     }
 
     public function initRoutes(\Closure $callback)
@@ -59,11 +56,13 @@ class RouteCollection
             $callback($this);
             $generator = new DataGenerator($this->patterns);
             $this->data = $generator->generate($this->routes, end($this->groupsStack));
+            $this->data['strategy'] = $this->strategy;
         } else {
             if (!file_exists($this->cache_file)) {
                 $callback($this);
                 $generator = new DataGenerator($this->patterns);
                 $this->data = $generator->generate($this->routes);
+                $this->data['strategy'] = $this->strategy;
                 file_put_contents($this->cache_file, json_encode($this->data));
             } else {
                 $this->data = json_decode(file_get_contents($this->cache_file), true);
@@ -71,11 +70,15 @@ class RouteCollection
         }
     }
 
+    public function setStrategy($strategy)
+    {
+        $this->strategy = $strategy;
+    }
+
     public function group($prefix_path, \Closure $callback)
     {
         $parentgroup = end($this->groupsStack);
         $group = $parentgroup->addGroup($prefix_path);
-        $this->groups[] = $group;
         $this->groupsStack[] = $group;
         if (is_callable($callback)) {
             $callback($this);
@@ -133,17 +136,6 @@ class RouteCollection
     public function options($path, $handler)
     {
         return $this->map('OPTIONS', $path, $handler);
-    }
-
-    public function viewRoutes()
-    {
-        $routes = [];
-        foreach ($this->groups as $group) {
-            foreach ($group->getRoutes() as $route) {
-                $routes[] = $route->pathLog();
-            }
-        }
-        return $routes;
     }
 
     public function getDispatcher(): Dispatcher

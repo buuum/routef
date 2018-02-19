@@ -16,13 +16,11 @@
   ],
   "autoload": {
     "psr-4": {
-      "RouteF\\": "src/RouteF",
-      "Controller\\": "demo/Controller"
+      "RouteF\\": "src/RouteF"
     }
   },
   "require": {
     "php": ">=7.0.0",
-    "psr/container": "^1.0",
     "league/container": "^2.4"
   },
   "require-dev": {
