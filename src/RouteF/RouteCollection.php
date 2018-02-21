@@ -158,4 +158,9 @@ class RouteCollection
             $request_url ? parse_url($request_url) : $this->request_url);
 
     }
+
+    public function addPatternMatcher($name, $regex)
+    {
+        $this->patterns[$name] = $regex;
+    }
 }
