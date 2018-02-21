@@ -75,7 +75,7 @@ class RouteCollection
         $this->strategy = $strategy;
     }
 
-    public function group($prefix_path, \Closure $callback)
+    public function group($prefix_path, \Closure $callback): RouteGroup
     {
         $parentgroup = end($this->groupsStack);
         $group = $parentgroup->addGroup($prefix_path);
@@ -87,7 +87,7 @@ class RouteCollection
         return $group;
     }
 
-    public function map($method, $path, $handler)
+    public function map($method, $path, $handler): Route
     {
         $group = end($this->groupsStack);
         $route = $group->addRoute((array)$method, $path, $handler);
