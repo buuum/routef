@@ -88,7 +88,7 @@ class RouteGroup
     }
 
 
-    public function middleware(callable $callable)
+    public function middleware($callable)
     {
         foreach ($this->routes as $route) {
             $route->middleware($callable);
