@@ -5,6 +5,7 @@ namespace RouteF\Dispatcher;
 use League\Container\Container;
 use RouteF\Exceptions\MethodNotAllowedException;
 use RouteF\Exceptions\NotFoundException;
+use RouteF\Route;
 use RouteF\Strategy\DefaultStrategy;
 use RouteF\Strategy\StrategyInterface;
 
@@ -89,7 +90,7 @@ class Dispatcher
                 $this->setStrategy($route['strategy']);
             }
 
-            if (!in_array(strtoupper($method), $route['methods'])) {
+            if (!in_array(strtoupper($method), $route['methods']) && !in_array('ANY', $route['methods'])) {
                 return $this->handleMethodNotAllowed($method);
             }
 
