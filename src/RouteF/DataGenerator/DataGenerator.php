@@ -15,55 +15,54 @@ class DataGenerator
         $this->patterns = $patterns;
     }
 
-    /**
-     * @param $routes Route[]
-     * @param RouteGroup $parentgroup
-     * @return array
-     */
-    public function generate($routes, RouteGroup $parentgroup = null)
+    public function generate($methodroutes, RouteGroup $parentgroup = null)
     {
 
         $maxGroup = 15;
-
-        $routeMap = [];
-        $regexes = [];
-        $index = 0;
-        $numGroups = 0;
-
         $array_routes = [];
 
-        foreach ($routes as $route) {
-            list($regex, $args) = $this->parseRoute($route->pathLog());
-            $inforoute = [
-                'name'      => $route->name(),
-                'url'       => $route->pathLog(),
-                'regex'     => $regex,
-                'methods'   => $route->methods(),
-                'handlers'  => $route->getHandlers(),
-                'strategy'  => $route->strategy(),
-                'arguments' => array_column($args, 'name')
-            ];
+        foreach ($methodroutes as $method => $routes) {
 
-            $numVariables = count($inforoute['arguments']);
-            $numGroups = max($numGroups, $numVariables);
-            $regexes[$index][] = $inforoute['regex'] . str_repeat('()', $numGroups - $numVariables);
-            $routeMap[$index][$numGroups + 1] = $inforoute;
-            ++$numGroups;
-            if ($numGroups > $maxGroup) {
-                $numGroups = 0;
-                $index++;
+            $routeMap = [];
+            $regexes = [];
+            $index = 0;
+            $numGroups = 0;
+
+            /** @var Route $route */
+            foreach ($routes as $route) {
+                list($regex, $args) = $this->parseRoute($route->pathLog());
+                $inforoute = [
+                    'name'      => $route->name(),
+                    'url'       => $route->pathLog(),
+                    'regex'     => $regex,
+                    'methods'   => $route->methods(),
+                    'handlers'  => $route->getHandlers(),
+                    'strategy'  => $route->strategy(),
+                    'arguments' => array_column($args, 'name')
+                ];
+
+                $numVariables = count($inforoute['arguments']);
+                $numGroups = max($numGroups, $numVariables);
+                $regexes[$index][] = $inforoute['regex'] . str_repeat('()', $numGroups - $numVariables);
+                $routeMap[$index][$numGroups + 1] = $inforoute;
+                ++$numGroups;
+                if ($numGroups > $maxGroup) {
+                    $numGroups = 0;
+                    $index++;
+                }
+
+                if ($route->name()) {
+                    $array_routes['names'][$route->name()] = $inforoute;
+                }
             }
 
-            if ($route->name()) {
-                $array_routes['names'][$route->name()] = $inforoute;
+            foreach ($regexes as $n => $regex) {
+                $array_routes[$method]['regexes'][] = [
+                    'regex'    => '~^(?|' . implode('|', $regex) . ')$~',
+                    'routeMap' => $routeMap[$n]
+                ];
             }
-        }
 
-        foreach ($regexes as $n => $regex) {
-            $array_routes['regexes'][] = [
-                'regex'    => '~^(?|' . implode('|', $regex) . ')$~',
-                'routeMap' => $routeMap[$n]
-            ];
         }
 
         $array_routes['groups'] = [];

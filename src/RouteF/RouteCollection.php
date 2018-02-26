@@ -91,7 +91,9 @@ class RouteCollection
     {
         $group = end($this->groupsStack);
         $route = $group->addRoute((array)$method, $path, $handler);
-        $this->routes[] = $route;
+        foreach ($route->methods() as $method) {
+            $this->routes[$method][] = $route;
+        }
         return $route;
     }
 

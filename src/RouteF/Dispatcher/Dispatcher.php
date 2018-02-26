@@ -77,8 +77,19 @@ class Dispatcher
 
     public function dispatch($method, $path)
     {
+        $regexes = [];
+        if (!empty($this->data[strtoupper($method)])) {
+            $regexes += $this->data[strtoupper($method)];
+        }
+        if (!empty($this->data['ANY'])) {
+            $regexes += $this->data['ANY'];
+        }
 
-        foreach ($this->data['regexes'] as $regexgroup) {
+        if (empty($regexes)) {
+            return $this->handleMethodNotAllowed($method);
+        }
+
+        foreach ($regexes['regexes'] as $regexgroup) {
 
             if (!preg_match($regexgroup['regex'], $path, $matches)) {
                 continue;
