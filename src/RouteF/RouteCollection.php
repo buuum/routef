@@ -161,6 +161,11 @@ class RouteCollection
 
     }
 
+    public function getLastPage()
+    {
+        return $this->getDispatcher()->getPageDispatcher();
+    }
+
     public function addPatternMatcher($name, $regex)
     {
         $this->patterns[$name] = $regex;

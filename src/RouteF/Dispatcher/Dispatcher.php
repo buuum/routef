@@ -5,7 +5,6 @@ namespace RouteF\Dispatcher;
 use League\Container\Container;
 use RouteF\Exceptions\MethodNotAllowedException;
 use RouteF\Exceptions\NotFoundException;
-use RouteF\Route;
 use RouteF\Strategy\DefaultStrategy;
 use RouteF\Strategy\StrategyInterface;
 
@@ -17,6 +16,7 @@ class Dispatcher
 
     private $container;
     private $strategy;
+    private $page_dispatcher;
 
     public function __construct(Container $container, $data)
     {
@@ -111,6 +111,7 @@ class Dispatcher
                 $vars[$varName] = $matches[++$i];
             }
 
+            $this->page_dispatcher = $route['name'];
             return $this->handleFound($route, $vars);
         }
 
@@ -127,6 +128,11 @@ class Dispatcher
 
         return $this->handleNotFound();
 
+    }
+
+    public function getPageDispatcher()
+    {
+        return $this->page_dispatcher;
     }
 
     protected function setStrategy($strategy)
