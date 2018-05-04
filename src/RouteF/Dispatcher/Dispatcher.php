@@ -186,7 +186,7 @@ class Dispatcher
                 throw new \InvalidArgumentException("The argument {$argument} in route {$route['name']} is not valid");
             }
             $pattern = '@({' . $argument . '.*?})@';
-            $url = preg_replace($pattern, $params[$argument], $url);
+            $url = preg_replace($pattern, $params[$argument], $url, 1);
         }
 
         if (preg_match_all('~^' . $route['regex'] . '$~', $url, $arguments, PREG_SET_ORDER, 0)) {
