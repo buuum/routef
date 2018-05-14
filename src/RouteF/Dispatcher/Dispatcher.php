@@ -81,8 +81,13 @@ class Dispatcher
         if (!empty($this->data[strtoupper($method)])) {
             $regexes += $this->data[strtoupper($method)];
         }
+
         if (!empty($this->data['ANY'])) {
-            $regexes += $this->data['ANY'];
+            if (!empty($this->data['ANY']['regexes']) && is_array($this->data['ANY']['regexes'])) {
+                foreach ($this->data['ANY']['regexes'] as $reg) {
+                    $regexes['regexes'][] = $reg;
+                }
+            }
         }
 
         if (empty($regexes)) {
