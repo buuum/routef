@@ -189,7 +189,6 @@ class Dispatcher
             $url = preg_replace($pattern, $params[$argument], $url, 1);
         }
 
-        var_dump('~^' . $route['regex'] . '$~', $url);
         if (preg_match_all('~^' . $route['regex'] . '$~', $url, $arguments, PREG_SET_ORDER, 0)) {
             return $url;
         }
