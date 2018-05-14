@@ -130,7 +130,8 @@ class DataGenerator
 
     private function regexArg($arg)
     {
-        $regex = '[^/]';
+        //$regex = '[^/]';
+        $regex = '';
 
         if (!empty($arg['type'])) {
             if (empty($this->patterns[$arg['type']])) {
@@ -138,7 +139,7 @@ class DataGenerator
             }
             $regex .= $this->patterns[$arg['type']];
         } else {
-            $regex .= '*';
+            $regex .= '[^/]*';
         }
 
         return "($regex)";

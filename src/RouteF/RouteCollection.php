@@ -30,7 +30,7 @@ class RouteCollection
         'number'        => '[0-9]+',
         'word'          => '\w+',
         'alphanum_dash' => '[a-zA-Z0-9-_]+',
-        'slug'          => '[a-z0-9-]+',
+        'slug'          => '[a-z0-9-_]+',
         'uuid'          => '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}+'
     ];
     private $cache_file = '';
